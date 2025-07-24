@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import CarreraForm from '@/components/race/CarreraForm';
 import CarrerasTable from '@/components/race/CarrerasTable';
 import { obtenerCarrerasDeFirebase } from '@/services/firebaseCarreraService';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/client';
 import {
   FaBell,
@@ -44,32 +44,48 @@ export default function Pagina() {
   };
 
   const agregarCarrera = async () => {
+    console.log('Intentando agregar carrera...');
+
     if (
-      nuevoNombreCarrera.trim() === '' ||
-      disciplinaSeleccionada === '' ||
-      etapaCarrera.trim() === '' ||
-      fechaHoraCarrera.trim() === ''
+      !nuevoNombreCarrera.trim() ||
+      !disciplinaSeleccionada ||
+      !etapaCarrera.trim() ||
+      !fechaHoraCarrera.trim()
     ) {
       alert('Por favor, completa todos los campos.');
       return;
     }
 
     try {
+      const etapaParsed = parseInt(etapaCarrera, 10);
+      const fechaParsed = Timestamp.fromDate(new Date(fechaHoraCarrera));
+
+      if (isNaN(etapaParsed)) {
+        alert('La etapa debe ser un número válido.');
+        return;
+      }
+
       const nuevaCarrera = {
-        nombre: nuevoNombreCarrera,
+        nombre: nuevoNombreCarrera.trim(),
         disciplina: disciplinaSeleccionada,
-        etapa: etapaCarrera,
-        fechaHora: fechaHoraCarrera,
+        etapa: etapaParsed,
+        fechaHora: fechaParsed,
       };
 
+      console.log('Datos que se enviarán a Firestore:', nuevaCarrera);
+
       await addDoc(collection(db, 'carreras'), nuevaCarrera);
+
+      alert('Carrera guardada con éxito');
+
       setNuevoNombreCarrera('');
       setDisciplinaSeleccionada('');
       setEtapaCarrera('');
       setFechaHoraCarrera('');
-      cargarCarreras(); 
+      cargarCarreras();
     } catch (error) {
       console.error('Error al agregar carrera:', error);
+      alert('Error al guardar carrera: ' + error.message);
     }
   };
 
@@ -78,8 +94,7 @@ export default function Pagina() {
   };
 
   return (
-    <div className="fflex-col h-screen font-sans bg-gradient-to-b from-gray-100 to-orange-400 dark:from-[#041C32] dark:via-[#041C32] dark:to-orange-500 text-gray-900 dark:text-white">
-      {/* Navbar */}
+    <div className="fflex-col h-screen font-sans bg-gradient-to-b from-white to-gray-200 dark:from-[#041C32] dark:via-[#041C32] dark:to-orange-500 text-gray-900 dark:text-white">
       <nav className="bg-gradient-to-r from-gray-100 to-gray-600 text-white flex items-center justify-between p-2 mb-2 shadow-md dark:from-[#041C32] dark:to-orange-500">
         <div className="flex items-center ml-4">
           <Link href="/admin">

@@ -21,7 +21,7 @@ export default function CarrerasTable({ carreras, onVerCarrera, onEditarCarrera,
             <TableCell onClick={() => onVerCarrera(carrera.id)}>{carrera.disciplina}</TableCell>
             <TableCell onClick={() => onVerCarrera(carrera.id)}>{carrera.etapa}</TableCell>
             <TableCell onClick={() => onVerCarrera(carrera.id)}>
-              {new Date(carrera.fechaHora).toLocaleString()}
+              {carrera.fechaHora ? new Date(carrera.fechaHora.seconds * 1000).toLocaleString() : 'Sin fecha'}
             </TableCell>
           </TableRow>
         ))}

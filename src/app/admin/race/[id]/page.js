@@ -4,11 +4,7 @@ import { useParams } from 'next/navigation'
 import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import {
-  doc,
-  getDoc,
-  deleteDoc
-} from 'firebase/firestore'
+import { doc, getDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 
 import { Button } from '@/components/ui/button'
@@ -46,6 +42,7 @@ import FormularioEditarCarrera from '@/components/race/FormularioEditarCarrera'
 export default function DetalleCarreraPage() {
   const { id } = useParams()
   const [carrera, setCarrera] = useState(null)
+  const [loading, setLoading] = useState(true)
   const [darkMode, setDarkMode] = useState(false)
   const [showConfigMenu, setShowConfigMenu] = useState(false)
   const [mostrarFormularioEditar, setMostrarFormularioEditar] = useState(false)
@@ -64,6 +61,8 @@ export default function DetalleCarreraPage() {
       }
     } catch (error) {
       console.error('Error al cargar carrera:', error)
+    } finally {
+      setLoading(false)
     }
   }, [id])
 
@@ -94,7 +93,7 @@ export default function DetalleCarreraPage() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen font-sans bg-gradient-to-b from-gray-100 to-orange-400 dark:from-[#041C32] dark:to-orange-500 text-gray-900 dark:text-white">
+    <div className="flex flex-col min-h-screen font-sans bg-gradient-to-b from-white to-gray-200 dark:from-[#041C32] dark:to-orange-500 text-gray-900 dark:text-white">
       {/* Navbar */}
       <nav className="bg-gradient-to-r from-gray-100 to-gray-600 text-white flex items-center justify-between p-2 mb-2 shadow-md dark:from-[#041C32] dark:to-orange-500">
         <div className="flex items-center ml-4">
@@ -133,12 +132,7 @@ export default function DetalleCarreraPage() {
 
       <div className="relative flex flex-grow">
         {/* Sidebar */}
-        <div
-          className={`fixed top-40 left-4 z-50 transition-all duration-300 
-          bg-black/40 dark:bg-black/40 backdrop-blur-md text-white 
-          rounded-xl shadow-xl p-4 flex flex-col justify-start 
-          ${sidebarExpandido ? 'w-60' : 'w-14'}`}
-        >
+        <div className={`fixed top-40 left-4 z-50 transition-all duration-300 bg-black/40 dark:bg-black/40 backdrop-blur-md text-white rounded-xl shadow-xl p-4 flex flex-col justify-start ${sidebarExpandido ? 'w-60' : 'w-14'}`}>
           <div className="flex justify-end mb-4">
             <button
               className="hover:bg-white hover:bg-opacity-20 dark:hover:bg-gray-700 dark:hover:bg-opacity-50 rounded-full p-2 transition-all"
@@ -166,80 +160,63 @@ export default function DetalleCarreraPage() {
 
         {/* Contenido principal */}
         <div className={`flex-1 p-8 transition-all ${sidebarExpandido ? 'ml-72' : 'ml-24'}`}>
-          <h1 className="text-2xl font-extrabold text-gray-800 dark:text-gray-200 mb-4">Información de la Carrera</h1>
+          {loading ? (
+            <div className="text-center mt-10 text-gray-700 dark:text-gray-300 text-lg font-semibold">
+              Cargando información de la carrera...
+            </div>
+          ) : (
+            <>
+              <h1 className="text-2xl font-extrabold text-gray-800 dark:text-gray-200 mb-4">Información de la Carrera</h1>
+              <div className="border border-gray-400 p-4 rounded-lg shadow-md bg-white bg-opacity-0 dark:bg-gray-800 dark:bg-opacity-20 mb-10">
+                <div className="text-xl font-bold mb-2 text-gray-700 dark:text-gray-200">Detalles de la Carrera</div>
+                <hr className="border-gray-400 dark:border-orange-500 mb-2" />
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID</TableHead>
+                      <TableHead>Nombre</TableHead>
+                      <TableHead>Disciplina</TableHead>
+                      <TableHead>Etapa</TableHead>
+                      <TableHead>Fecha y Hora</TableHead>
+                      <TableHead>Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>{carrera?.id}</TableCell>
+                      <TableCell>{carrera?.nombre}</TableCell>
+                      <TableCell>{carrera?.disciplina}</TableCell>
+                      <TableCell>{carrera?.etapa ?? 'N/A'}</TableCell>
+                      <TableCell>
+                        {carrera?.fechaHora?.seconds
+                          ? new Date(carrera.fechaHora.seconds * 1000).toLocaleString()
+                          : 'Sin fecha'}
+                      </TableCell>
+                      <TableCell className="text-center space-x-2">
+                        <FaEdit className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-blue-400 dark:hover:text-blue-300" title="Editar" onClick={(e) => { e.stopPropagation(); onEditarCarrera(); }} />
+                        <FaTrash className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-red-400 dark:hover:text-red-300" title="Eliminar" onClick={(e) => { e.stopPropagation(); eliminarCarrera(carrera?.id); }} />
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
 
-          {/* Detalles de la carrera */}
-          <div className="border border-gray-400 p-4 rounded-lg shadow-md bg-white bg-opacity-0 dark:bg-gray-800 dark:bg-opacity-20 mb-10">
-            <div className="text-xl font-bold mb-2 text-gray-700 dark:text-gray-200">Detalles de la Carrera</div>
-            <hr className="border-gray-400 dark:border-orange-500 mb-2" />
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Disciplina</TableHead>
-                  <TableHead>Etapas</TableHead>
-                  <TableHead>Fecha y Hora</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>{carrera?.id}</TableCell>
-                  <TableCell>{carrera?.nombre}</TableCell>
-                  <TableCell>{carrera?.disciplina}</TableCell>
-                  <TableCell>{carrera?.etapas?.length || 0}</TableCell>
-                  <TableCell>{carrera?.fechaHora}</TableCell>
-                  <TableCell className="text-center space-x-2">
-                    <FaEdit
-                      className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-blue-400 dark:hover:text-blue-300"
-                      title="Editar"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEditarCarrera()
-                      }}
-                    />
-                    <FaTrash
-                      className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-red-400 dark:hover:text-red-300"
-                      title="Eliminar"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        eliminarCarrera(carrera?.id)
-                      }}
-                    />
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+              {seccionActiva === 'inscribir' && <div className="mb-10"><FormularioCompetidor /></div>}
+              {seccionActiva === 'ver' && <div className="mb-10"><VerCompetidores /></div>}
+              {seccionActiva === 'clasificaciones' && <div className="mb-10"><Clasificaciones /></div>}
 
-          {/* Secciones dinámicas */}
-          {seccionActiva === 'inscribir' && (
-            <div className="mb-10">
-              <FormularioCompetidor />
-            </div>
-          )}
-          {seccionActiva === 'ver' && (
-            <div className="mb-10">
-              <VerCompetidores />
-            </div>
-          )}
-          {seccionActiva === 'clasificaciones' && (
-            <div className="mb-10">
-              <Clasificaciones />
-            </div>
-          )}
-
-          {mostrarFormularioEditar && (
-            <div className="mb-10">
-              <FormularioEditarCarrera
-                carrera={carrera}
-                onGuardar={() => {
-                  setMostrarFormularioEditar(false)
-                  cargarCarrera()
-                }}
-              />
-            </div>
+              {mostrarFormularioEditar && (
+                <div className="mb-10">
+                  <FormularioEditarCarrera
+                    carrera={carrera}
+                    onGuardar={() => {
+                      setMostrarFormularioEditar(false)
+                      cargarCarrera()
+                    }}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
