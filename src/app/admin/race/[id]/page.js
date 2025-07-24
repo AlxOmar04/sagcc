@@ -1,11 +1,10 @@
 'use client'
 
 import { useParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import {
-  collection,
   doc,
   getDoc,
   deleteDoc
@@ -53,7 +52,7 @@ export default function DetalleCarreraPage() {
   const [sidebarExpandido, setSidebarExpandido] = useState(true)
   const [seccionActiva, setSeccionActiva] = useState(null)
 
-  const cargarCarrera = async () => {
+  const cargarCarrera = useCallback(async () => {
     try {
       const carreraRef = doc(db, 'carreras', id)
       const carreraSnap = await getDoc(carreraRef)
@@ -66,11 +65,11 @@ export default function DetalleCarreraPage() {
     } catch (error) {
       console.error('Error al cargar carrera:', error)
     }
-  }
+  }, [id])
 
   useEffect(() => {
     cargarCarrera()
-  }, [id])
+  }, [cargarCarrera])
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode)

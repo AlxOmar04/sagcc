@@ -22,7 +22,7 @@ export default function EditarCarrera({ carrera, onGuardar }) {
 
   const guardarCarreraEditada = async () => {
     if (!carrera || !carrera.id) {
-      console.error('❌ Carrera no válida.')
+      console.error('Carrera no válida.')
       return
     }
 

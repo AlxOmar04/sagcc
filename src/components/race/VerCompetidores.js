@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { FaTrash } from 'react-icons/fa'
 import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
@@ -11,7 +11,7 @@ export default function VerCompetidores() {
   const [competidores, setCompetidores] = useState([])
   const [cargando, setCargando] = useState(true)
 
-  const obtenerCompetidores = async () => {
+  const obtenerCompetidores = useCallback(async () => {
     setCargando(true)
     try {
       const snapshot = await getDocs(collection(db, `carreras/${id}/competidores`))
@@ -25,7 +25,7 @@ export default function VerCompetidores() {
     } finally {
       setCargando(false)
     }
-  }
+  }, [id])
 
   const eliminarCompetidor = async (competidorId) => {
     const confirmar = confirm('¿Deseas eliminar este competidor?')
@@ -41,7 +41,7 @@ export default function VerCompetidores() {
 
   useEffect(() => {
     obtenerCompetidores()
-  }, [])
+  }, [obtenerCompetidores])
 
   return (
     <div className="mt-6 border border-gray-400 p-4 rounded-lg shadow-md bg-white bg-opacity-0 dark:bg-gray-800 dark:bg-opacity-0">

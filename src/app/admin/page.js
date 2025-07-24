@@ -67,7 +67,7 @@ export default function Pagina() {
       setDisciplinaSeleccionada('');
       setEtapaCarrera('');
       setFechaHoraCarrera('');
-      cargarCarreras(); // Recargar después de agregar
+      cargarCarreras(); 
     } catch (error) {
       console.error('Error al agregar carrera:', error);
     }
