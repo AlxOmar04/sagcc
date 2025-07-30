@@ -1,0 +1,11 @@
+{
+  "hosting": {
+    "site": "sagcc-04",
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "nextApp"
+      }
+    ]
+  }
+}
