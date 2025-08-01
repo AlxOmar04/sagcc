@@ -1,18 +1,18 @@
-const functions = require("firebase-functions/v2/https"); 
-const { onRequest } = require("firebase-functions/v2/https");
+const functions = require("firebase-functions/v2/https");
+const logger = require("firebase-functions/logger");
 const next = require("next");
 
-const dev = process.env.NODE_ENV !== "production";
 const app = next({
-  dev,
+  dev: false,
   conf: {
-    distDir: ".next",
-  },
+    distDir: ".next"
+  }
 });
+
 const handle = app.getRequestHandler();
 
-// Exporta como función Gen 2
-exports.nextApp = onRequest({ region: "us-central1" }, async (req, res) => {
+exports.nextServer = functions.onRequest({ region: "us-central1", timeoutSeconds: 60 }, async (req, res) => {
   await app.prepare();
+  logger.info("Handling request with Next.js");
   return handle(req, res);
 });
