@@ -26,7 +26,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
 .env
 .env.local
 
@@ -39,4 +38,4 @@ next-env.d.ts
 
 # firebase functions
 /functions/node_modules
-.env.local
+functions/node_modules 
