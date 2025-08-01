@@ -1,4 +1,4 @@
-name: Deploy to Firebase Hosting on merge
+name: Deploy to Firebase Hosting on Merge
 
 on:
   push:
@@ -8,31 +8,29 @@ on:
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
-    name: Build and Deploy
-
     steps:
-      - name: Checkout the code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install root dependencies
-        run: npm install
-
-      - name: Install functions dependencies
-        working-directory: functions
-        run: npm install
+        run: npm ci
 
       - name: Build Next.js app
         run: npm run build
 
-      - name: Deploy to Firebase Hosting
+      - name: Install Functions dependencies
+        working-directory: functions
+        run: npm ci
+
+      - name: Deploy to Firebase Hosting and Functions
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
-          repoToken: "${{ secrets.GITHUB_TOKEN }}"
-          firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAGCC_04 }}"
-          channelId: live
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAGCC_04 }}
           projectId: sagcc-04
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
