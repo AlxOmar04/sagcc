@@ -1,40 +1,32 @@
-name: Deploy Preview to Firebase Hosting on PR
+name: Preview Deploy to Firebase Hosting on PR
 
-on: pull_request
-
-permissions:
-  checks: write
-  contents: read
-  pull-requests: write
+on:
+  pull_request:
+    branches:
+      - main
 
 jobs:
   build_and_preview:
-    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: '20'
 
-      - name: Install root dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm install
 
-      - name: Build Next.js app
+      - name: Build project
         run: npm run build
 
-      - name: Install Functions dependencies
-        working-directory: functions
-        run: npm ci
-
-      - name: Deploy preview to Firebase Hosting
+      - name: Deploy to Firebase Hosting Preview Channel
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAGCC_04 }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           projectId: sagcc-04
-          channelId: pr-${{ github.event.pull_request.number }}
-        env:
-          FIREBASE_CLI_EXPERIMENTS: webframeworks
