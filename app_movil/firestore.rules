@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Acceso privado al perfil del usuario
+    match /usuarios/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Acceso a carreras: solo autenticados
+    match /carreras/{docId} {
+      allow read, write: if request.auth != null;
+
+      // Competidores: solo autenticados
+      match /competidores/{competidorId} {
+        allow read, write: if request.auth != null;
+      }
+
+      // Clasificaciones: lectura pública, escritura solo autenticados
+      match /clasificaciones/{clasificacionId} {
+        allow read: if true; // lectura pública
+        allow write: if request.auth != null;
+      }
+    }
+  }
+}
+
