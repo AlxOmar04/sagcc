@@ -33,9 +33,9 @@ export default function LoginComponent() {
     >
       <form
         onSubmit={handleLogin}
-        className="backdrop-blur-md bg-white/30 dark:bg-gray-800/30 p-8 rounded-2xl shadow-lg w-full max-w-md border border-white/20"
+        className="backdrop-blur-md bg-white/20 dark:bg-gray-800/30 p-8 rounded-2xl shadow-lg w-full max-w-md border border-white/20"
       >
-        <h2 className="text-3xl font-bold mb-6 text-center text-gray-900 dark:text-white">
+        <h2 className="text-2xl font-bold mb-6 text-center text-gray-900 dark:text-white">
           Iniciar Sesión
         </h2>
 
@@ -60,12 +60,12 @@ export default function LoginComponent() {
           required
         />
         
-        {/* Aquí el cambio principal */}
+
         <Button
           type="submit"
-          className="w-full bg-gradient-to-r from-white to-gray-400 border border-orange-400 hover:from-gray-200 hover:to-gray-500 hover:border-gray-500 text-sm rounded-full text-black font-semibold"
+          className="w-full bg-gradient-to-r from-white to-orange-400 border border-gray-400 hover:from-gray-200 hover:to-gray-500 hover:border-orange-400 text-sm rounded-full text-black font-semibold"
         >
-          Entrar
+          Iniciar
         </Button>
       </form>
     </div>

@@ -9,23 +9,12 @@ import { db } from '@/lib/firebase/client';
 import { getAuth, signOut } from 'firebase/auth';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 import {
-  FaBell,
   FaCog,
-  FaMoon,
   FaSignInAlt,
   FaSignOutAlt,
-  FaSun,
   FaEdit,
   FaTrash,
   FaUserPlus,
@@ -55,19 +44,26 @@ export default function DetalleCarreraPage() {
   const [mostrarModalInscribir, setMostrarModalInscribir] = useState(false);
   const [mensajeConfirmacion, setMensajeConfirmacion] = useState('');
 
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'carreras', id), (docSnap) => {
-      if (docSnap.exists()) {
-        setCarrera({ id: docSnap.id, ...docSnap.data() });
-      } else {
-        console.warn('No existe la carrera con ese ID.');
-      }
-      setLoading(false);
-    }, (error) => {
-      console.error('Error al escuchar carrera:', error);
-      setLoading(false);
-    });
+  // Modal de confirmación para eliminar carrera
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
 
+  useEffect(() => {
+    const unsub = onSnapshot(
+      doc(db, 'carreras', String(id)),
+      (docSnap) => {
+        if (docSnap.exists()) {
+          setCarrera({ id: docSnap.id, ...docSnap.data() });
+        } else {
+          console.warn('No existe la carrera con ese ID.');
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error('Error al escuchar carrera:', error);
+        setLoading(false);
+      }
+    );
     return () => unsub();
   }, [id]);
 
@@ -81,17 +77,38 @@ export default function DetalleCarreraPage() {
 
   const onEditarCarrera = () => setMostrarFormularioEditar(true);
 
-  const eliminarCarrera = async (idCarrera) => {
-    if (confirm("¿Estás seguro de eliminar esta carrera?")) {
-      try {
-        await deleteDoc(doc(db, 'carreras', idCarrera));
-        alert("Carrera eliminada");
-        window.location.href = '/admin';
-      } catch (error) {
-        console.error('Error al eliminar carrera:', error);
-        alert('No se pudo eliminar la carrera.');
-      }
+  // Abrir modal de confirmación
+  const solicitarEliminarCarrera = (idCarrera) => {
+    if (!idCarrera) return;
+    setPendingDeleteId(idCarrera);
+    setConfirmOpen(true);
+  };
+
+  // Confirmar eliminación
+  const confirmarEliminarCarrera = async () => {
+    if (!pendingDeleteId) return;
+    try {
+      await deleteDoc(doc(db, 'carreras', pendingDeleteId));
+      setConfirmOpen(false);
+      setPendingDeleteId(null);
+      setMensajeConfirmacion('Carrera eliminada');
+      // Redirige luego de un breve mensaje
+      setTimeout(() => {
+        setMensajeConfirmacion('');
+        router.push('/admin');
+      }, 1300);
+    } catch (error) {
+      console.error('Error al eliminar carrera:', error);
+      setConfirmOpen(false);
+      setPendingDeleteId(null);
+      alert('No se pudo eliminar la carrera.');
     }
+  };
+
+  // Cancelar modal
+  const cancelarEliminarCarrera = () => {
+    setConfirmOpen(false);
+    setPendingDeleteId(null);
   };
 
   const handleLogout = async () => {
@@ -107,32 +124,33 @@ export default function DetalleCarreraPage() {
   return (
     <IsAuth>
       <div className="flex flex-col min-h-screen font-sans bg-gradient-to-b from-white to-gray-200 dark:from-[#041C32] dark:to-orange-500 text-gray-900 dark:text-white">
-        <nav className="bg-gradient-to-r from-gray-100 to-gray-600 text-white flex items-center justify-between p-2 mb-2 shadow-md dark:from-[#041C32] dark:to-orange-500">
+        <nav className="bg-gradient-to-r from-gray-100 to-gray-500 text-white flex items-center justify-between p-2 mb-2 shadow-md dark:from-[#041C32] dark:to-orange-500">
           <div className="flex items-center ml-4">
             <Link href="/admin">
-              <Image src="/img/logo.png" alt="logo" width={54} height={50} style={{ width: 'auto', height: 'auto' }} />
+              <Image src="/img/logo.png" alt="logo" width={48} height={42} style={{ width: 'auto', height: 'auto' }} />
             </Link>
+            <span className="ml-2 text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">S A G C C</span>
           </div>
-          <div className="flex-grow flex justify-center">
-            <Input className="w-1/2 text-gray-700 dark:text-gray-300 dark:placeholder-gray-400" placeholder="Buscar carreras..." />
-          </div>
+
           <div className="flex items-center space-x-2 relative mr-2">
-            <Button className="bg-gray-500 text-white hover:bg-[#041C32] p-1 rounded-full p-0.5 h-8">
-              <FaBell size={18} />
-            </Button>
-            <Button className="bg-gray-500 text-white hover:bg-[#041C32] p-1 rounded-full p-0.5 h-8 relative" onClick={() => setShowConfigMenu(!showConfigMenu)}>
+            <Button
+              className="bg-gray-500 text-white hover:bg-[#041C32] rounded-full p-0.5 h-8"
+              onClick={() => setShowConfigMenu(!showConfigMenu)}
+            >
               <FaCog size={18} />
             </Button>
             {showConfigMenu && (
               <ul className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 text-gray-900 dark:text-white shadow-lg rounded-lg overflow-hidden z-10">
-                <li className="flex items-center justify-between p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" onClick={() => setDarkMode(!darkMode)}>
-                  {darkMode ? 'Modo Claro' : 'Modo Oscuro'}
-                  {darkMode ? <FaSun /> : <FaMoon />}
-                </li>
-                <li className="flex items-center p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" onClick={() => router.push('/login')}>
+                <li
+                  className="flex items-center p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                  onClick={() => router.push('/login')}
+                >
                   <FaSignInAlt className="mr-2" /> Cambiar de cuenta
                 </li>
-                <li className="flex items-center p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer" onClick={handleLogout}>
+                <li
+                  className="flex items-center p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                  onClick={handleLogout}
+                >
                   <FaSignOutAlt className="mr-2" /> Cerrar sesión
                 </li>
               </ul>
@@ -141,9 +159,16 @@ export default function DetalleCarreraPage() {
         </nav>
 
         <div className="relative flex flex-grow">
-          <div className={`fixed top-40 left-4 z-50 transition-all duration-300 bg-black/40 dark:bg-black/40 backdrop-blur-md text-white rounded-xl shadow-xl p-4 flex flex-col justify-start ${sidebarExpandido ? 'w-60' : 'w-14'}`}>
+          <div
+            className={`fixed top-40 left-4 z-50 transition-all duration-300 bg-black/40 dark:bg-black/40 backdrop-blur-md text-white rounded-xl shadow-xl p-4 flex flex-col justify-start ${
+              sidebarExpandido ? 'w-60' : 'w-14'
+            }`}
+          >
             <div className="flex justify-end mb-4">
-              <button onClick={() => setSidebarExpandido(!sidebarExpandido)} className="hover:bg-white hover:bg-opacity-20 dark:hover:bg-gray-700 dark:hover:bg-opacity-50 rounded-full p-2 transition-all">
+              <button
+                onClick={() => setSidebarExpandido(!sidebarExpandido)}
+                className="hover:bg-white hover:bg-opacity-20 dark:hover:bg-gray-700 dark:hover:bg-opacity-50 rounded-full p-2 transition-all"
+              >
                 {sidebarExpandido ? <FaChevronLeft /> : <FaChevronRight />}
               </button>
             </div>
@@ -154,7 +179,7 @@ export default function DetalleCarreraPage() {
               </Link>
               <Link href="#" onClick={() => setSeccionActiva('ver')} className="flex items-center space-x-2 group cursor-pointer">
                 <FaUsers className="group-hover:text-black" />
-                {sidebarExpandido && <span className="text-sm font-semibold group-hover:text-black">Ver Competidores</span>}
+                {sidebarExpandido && <span className="text-sm font-semibold group-hover:text-black">Inscritos</span>}
               </Link>
               <Link href="#" onClick={() => setSeccionActiva('clasificaciones')} className="flex items-center space-x-2 group cursor-pointer">
                 <FaTrophy className="group-hover:text-black" />
@@ -191,10 +216,26 @@ export default function DetalleCarreraPage() {
                         <TableCell>{carrera?.nombre}</TableCell>
                         <TableCell>{carrera?.disciplina}</TableCell>
                         <TableCell>{carrera?.etapa ?? 'N/A'}</TableCell>
-                        <TableCell>{carrera?.fechaHora?.seconds ? new Date(carrera.fechaHora.seconds * 1000).toLocaleString() : 'Sin fecha'}</TableCell>
+                        <TableCell>
+                          {carrera?.fechaHora?.seconds ? new Date(carrera.fechaHora.seconds * 1000).toLocaleString() : 'Sin fecha'}
+                        </TableCell>
                         <TableCell className="text-center space-x-2">
-                          <FaEdit className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-blue-400 dark:hover:text-blue-300" title="Editar" onClick={(e) => { e.stopPropagation(); onEditarCarrera(); }} />
-                          <FaTrash className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-red-400 dark:hover:text-red-300" title="Eliminar" onClick={(e) => { e.stopPropagation(); eliminarCarrera(carrera?.id); }} />
+                          <FaEdit
+                            className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-blue-400 dark:hover:text-blue-300"
+                            title="Editar"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditarCarrera();
+                            }}
+                          />
+                          <FaTrash
+                            className="inline text-gray-500 dark:text-gray-300 cursor-pointer hover:text-red-400 dark:hover:text-red-300"
+                            title="Eliminar"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              solicitarEliminarCarrera(carrera?.id);
+                            }}
+                          />
                         </TableCell>
                       </TableRow>
                     </TableBody>
@@ -203,7 +244,7 @@ export default function DetalleCarreraPage() {
 
                 {seccionActiva === 'ver' && (
                   <div className="mb-10">
-                    <VerCompetidores carreraId={id} />
+                    <VerCompetidores carreraId={String(id)} />
                   </div>
                 )}
                 {seccionActiva === 'clasificaciones' && (
@@ -215,14 +256,22 @@ export default function DetalleCarreraPage() {
                 {mostrarFormularioEditar && (
                   <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm px-4">
                     <div className="relative w-full max-w-md">
-                      <button onClick={() => setMostrarFormularioEditar(false)} className="absolute top-2 right-4 text-black dark:text-white text-2xl font-bold z-10">✕</button>
-                      <FormularioEditarCarrera carrera={carrera} onGuardar={() => {
-                        setMostrarFormularioEditar(false);
-                        setMensajeConfirmacion('¡Cambios guardados con éxito!');
-                        setTimeout(() => {
-                          setMensajeConfirmacion('');
-                        }, 2000);
-                      }} />
+                      <button
+                        onClick={() => setMostrarFormularioEditar(false)}
+                        className="absolute top-2 right-4 text-black dark:text-white text-2xl font-bold z-10"
+                      >
+                        ✕
+                      </button>
+                      <FormularioEditarCarrera
+                        carrera={carrera}
+                        onGuardar={() => {
+                          setMostrarFormularioEditar(false);
+                          setMensajeConfirmacion('¡Cambios guardados con éxito!');
+                          setTimeout(() => {
+                            setMensajeConfirmacion('');
+                          }, 2000);
+                        }}
+                      />
                     </div>
                   </div>
                 )}
@@ -244,7 +293,15 @@ export default function DetalleCarreraPage() {
           {mostrarModalInscribir && (
             <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center backdrop-blur-sm px-4">
               <div className="relative w-full max-w-md">
-                <button onClick={() => { setMostrarModalInscribir(false); setMensajeConfirmacion(''); }} className="absolute top-12 right-4 text-black text-2xl font-bold z-10">✕</button>
+                <button
+                  onClick={() => {
+                    setMostrarModalInscribir(false);
+                    setMensajeConfirmacion('');
+                  }}
+                  className="absolute top-12 right-4 text-black text-2xl font-bold z-10"
+                >
+                  ✕
+                </button>
 
                 {mensajeConfirmacion ? (
                   <div className="bg-black/50 border border-orange-400 rounded-xl p-6 text-center text-white">
@@ -254,14 +311,46 @@ export default function DetalleCarreraPage() {
                     <p className="text-lg font-bold">{mensajeConfirmacion}</p>
                   </div>
                 ) : (
-                  <FormularioCompetidor carreraId={id} onGuardado={() => {
-                    setMensajeConfirmacion('¡Competidor guardado con éxito!');
-                    setTimeout(() => {
-                      setMostrarModalInscribir(false);
-                      setMensajeConfirmacion('');
-                    }, 2000);
-                  }} />
+                  <FormularioCompetidor
+                    carreraId={String(id)}
+                    onGuardado={() => {
+                      setMensajeConfirmacion('¡Competidor guardado con éxito!');
+                      setTimeout(() => {
+                        setMostrarModalInscribir(false);
+                        setMensajeConfirmacion('');
+                      }, 2000);
+                    }}
+                  />
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Modal de confirmación para eliminar carrera (estilo consistente) */}
+          {confirmOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+              <div className="relative w-full max-w-md">
+                <div className="bg-black/50 border border-orange-400 rounded-xl p-6 text-center text-white">
+                  <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mx-auto mb-4">
+                    <span className="text-4xl text-white">!</span>
+                  </div>
+                  <p className="text-lg font-bold mb-2">¿Eliminar esta carrera?</p>
+                  <p className="mb-6 text-sm opacity-90">Esta acción no se puede deshacer.</p>
+                  <div className="flex items-center justify-center gap-3">
+                    <button
+                      onClick={cancelarEliminarCarrera}
+                      className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 transition"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={confirmarEliminarCarrera}
+                      className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 transition"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

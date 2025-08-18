@@ -1,6 +1,6 @@
-const functions = require("firebase-functions/v2/https");
-const logger = require("firebase-functions/logger");
-const next = require("next");
+import { onRequest } from "firebase-functions/v2/https";
+import { logger } from "firebase-functions";
+import next from "next";
 
 const app = next({
   dev: false,
@@ -11,8 +11,11 @@ const app = next({
 
 const handle = app.getRequestHandler();
 
-exports.nextServer = functions.onRequest({ region: "us-central1", timeoutSeconds: 60 }, async (req, res) => {
-  await app.prepare();
-  logger.info("Handling request with Next.js");
-  return handle(req, res);
-});
+export const nextServer = onRequest(
+  { region: "us-central1", timeoutSeconds: 60 },
+  async (req, res) => {
+    await app.prepare();
+    logger.info("Handling request with Next.js");
+    handle(req, res);
+  }
+);

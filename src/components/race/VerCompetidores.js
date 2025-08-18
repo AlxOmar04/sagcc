@@ -5,20 +5,24 @@ import { FaTrash, FaFilePdf, FaFileExcel } from 'react-icons/fa'
 import { collection, deleteDoc, doc, onSnapshot } from 'firebase/firestore'
 import { db } from '@/lib/firebase/client'
 import { useParams } from 'next/navigation'
-import Link from 'next/link'
 
 export default function VerCompetidores() {
   const { id } = useParams()
   const [competidores, setCompetidores] = useState([])
   const [cargando, setCargando] = useState(true)
+  const [exportando, setExportando] = useState(null) // 'pdf' | 'xlsx' | null
+
+  // Estado para el modal de confirmación
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const [confirmTargetId, setConfirmTargetId] = useState(null)
 
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, `carreras/${id}/competidores`),
       (snapshot) => {
-        const lista = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        const lista = snapshot.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
         }))
         setCompetidores(lista)
         setCargando(false)
@@ -32,14 +36,68 @@ export default function VerCompetidores() {
     return () => unsubscribe()
   }, [id])
 
-  const eliminarCompetidor = async (competidorId) => {
-    const confirmar = confirm('¿Deseas eliminar este competidor?')
-    if (!confirmar) return
+  // Abrir modal
+  const solicitarEliminar = (competidorId) => {
+    setConfirmTargetId(competidorId)
+    setConfirmOpen(true)
+  }
 
+  // Confirmar eliminación
+  const confirmarEliminar = async () => {
+    if (!confirmTargetId) return
     try {
-      await deleteDoc(doc(db, `carreras/${id}/competidores`, competidorId))
+      await deleteDoc(doc(db, `carreras/${id}/competidores`, confirmTargetId))
     } catch (error) {
       console.error('Error al eliminar competidor:', error)
+      alert('No se pudo eliminar el competidor.')
+    } finally {
+      setConfirmOpen(false)
+      setConfirmTargetId(null)
+    }
+  }
+
+  // Cancelar modal
+  const cancelarEliminar = () => {
+    setConfirmOpen(false)
+    setConfirmTargetId(null)
+  }
+
+  async function exportar(format) {
+    if (!competidores?.length) return
+    try {
+      setExportando(format)
+      const rows = competidores.map((c) => ({
+        nombre: c.nombre ?? '',
+        cedula: c.cedula ?? '',
+        edad: c.edad ?? '',
+        team: c.team ?? '',
+        dorsal: c.dorsal ?? '',
+      }))
+
+      const res = await fetch(`/api/exports/competidores?format=${format}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ carreraId: String(id), rows }),
+      })
+      if (!res.ok) {
+        const txt = await res.text().catch(() => '')
+        throw new Error(`No se pudo generar el archivo (${res.status}) ${txt}`)
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `competidores_${id}.${format === 'xlsx' ? 'xlsx' : 'pdf'}`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+      alert('Error al exportar. Revisa la consola.')
+    } finally {
+      setExportando(null)
     }
   }
 
@@ -55,20 +113,29 @@ export default function VerCompetidores() {
         </p>
 
         <div className="flex gap-2">
-          <Link
-            href="/descargas/competidores_inscritos.pdf"
-            download
-            className="flex items-center gap-1 px-3 py-1 border border-red-500 bg-red-100 hover:bg-red-200 text-red-600 rounded-full text-sm font-medium transition"
+          <button
+            type="button"
+            onClick={() => exportar('pdf')}
+            disabled={!competidores.length || exportando === 'pdf'}
+            className="flex items-center gap-1 px-3 py-1 border border-red-500 bg-red-100 hover:bg-red-200 text-red-600 rounded-full text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-busy={exportando === 'pdf'}
+            title="Exportar PDF"
           >
-            <FaFilePdf /> Exportar PDF
-          </Link>
-          <Link
-            href="/descargas/competidores_inscritos.xlsx"
-            download
-            className="flex items-center gap-1 px-3 py-1 border border-green-500 bg-green-100 hover:bg-green-200 text-green-700 rounded-full text-sm font-medium transition"
+            <FaFilePdf />
+            {exportando === 'pdf' ? 'Generando...' : 'Exportar PDF'}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => exportar('xlsx')}
+            disabled={!competidores.length || exportando === 'xlsx'}
+            className="flex items-center gap-1 px-3 py-1 border border-green-500 bg-green-100 hover:bg-green-200 text-green-700 rounded-full text-sm font-medium transition disabled:opacity-60 disabled:cursor-not-allowed"
+            aria-busy={exportando === 'xlsx'}
+            title="Exportar Excel"
           >
-            <FaFileExcel /> Exportar Excel
-          </Link>
+            <FaFileExcel />
+            {exportando === 'xlsx' ? 'Generando...' : 'Exportar Excel'}
+          </button>
         </div>
       </div>
 
@@ -104,8 +171,8 @@ export default function VerCompetidores() {
                   <td className="px-4 py-2">{competidor.dorsal}</td>
                   <td className="px-4 py-2 text-center">
                     <button
-                      onClick={() => eliminarCompetidor(competidor.id)}
-                      className="text-gray-500 dark:text-gray-300 hover:text-red-400 dark:hover:text-red-300 transition-colors duration-200"
+                      onClick={() => solicitarEliminar(competidor.id)}
+                      className="text-gray-500 dark:text-gray-300 hover:text-red-500 dark:hover:text-red-300 transition-colors duration-200"
                       title="Eliminar Competidor"
                     >
                       <FaTrash />
@@ -123,7 +190,37 @@ export default function VerCompetidores() {
           </tbody>
         </table>
       </div>
+
+      {/* Modal de confirmación con el mismo estilo de tus mensajes */}
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="relative w-full max-w-md">
+            <div className="bg-black/50 border border-orange-400 rounded-xl p-6 text-center text-white">
+              <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center mx-auto mb-4">
+                <span className="text-4xl text-white">!</span>
+              </div>
+              <p className="text-lg font-bold mb-2">¿Eliminar competidor?</p>
+              <p className="mb-6 text-sm opacity-90">
+                Esta acción no se puede deshacer.
+              </p>
+              <div className="flex items-center justify-center gap-3">
+                <button
+                  onClick={cancelarEliminar}
+                  className="px-4 py-2 rounded-lg bg-white/20 hover:bg-white/30 transition"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarEliminar}
+                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 transition"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
