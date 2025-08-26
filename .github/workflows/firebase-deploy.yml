@@ -46,3 +46,5 @@ jobs:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAGCC_04 }}"
           projectId: sagcc-04
+
+          # Trigger rebuild
