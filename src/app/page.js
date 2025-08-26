@@ -1,62 +1,188 @@
-import Image from "next/image";
+'use client'
 
-export default function Home() {
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
+import Image from 'next/image'
+import { FaCog } from 'react-icons/fa'
+import { useRouter } from 'next/navigation'
+
+import { db } from '@/lib/firebase/client'
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore'
+
+export default function HomePage() {
+  const [showConfigMenu, setShowConfigMenu] = useState(false)
+  const [clasificaciones, setClasificaciones] = useState([])
+  const [competencia, setCompetencia] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [currentDateTime, setCurrentDateTime] = useState('')
+  const router = useRouter()
+
+  // Fecha y hora del lado del cliente (evita hydration error)
+  useEffect(() => {
+    const now = new Date()
+    setCurrentDateTime(now.toLocaleString())
+  }, [])
+
+  // Cargar última competencia y clasificaciones
+  useEffect(() => {
+    let mounted = true
+
+    const fetchLastCompetition = async () => {
+      setLoading(true)
+      try {
+        const carrerasSnap = await getDocs(collection(db, 'carreras'))
+        if (carrerasSnap.empty) {
+          setCompetencia(null)
+          setClasificaciones([])
+          setLoading(false)
+          return
+        }
+
+        const latestDoc = carrerasSnap.docs[carrerasSnap.docs.length - 1]
+        const compData = latestDoc.data()
+        const compId = latestDoc.id
+
+        const generalDocRef = doc(db, 'carreras', compId, 'clasificacionPublica', 'general')
+        const generalSnap = await getDoc(generalDocRef)
+
+        let rows = []
+        if (generalSnap.exists()) {
+          const data = generalSnap.data()
+          if (Array.isArray(data.rows)) {
+            rows = data.rows
+          }
+        }
+
+        if (!mounted) return
+        setCompetencia({ id: compId, ...compData })
+        setClasificaciones(rows)
+      } catch (err) {
+        console.error('Error cargando última competencia:', err)
+        if (!mounted) return
+        setCompetencia(null)
+        setClasificaciones([])
+      } finally {
+        if (!mounted) return
+        setLoading(false)
+      }
+    }
+
+    fetchLastCompetition()
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
-        <p className="fixed left-0 top-0 flex w-full justify-center border-b border-gray-300 bg-gradient-to-b from-zinc-200 pb-6 pt-8 backdrop-blur-2xl dark:border-neutral-800 dark:bg-zinc-800/30 dark:from-inherit lg:static lg:w-auto  lg:rounded-xl lg:border lg:bg-gray-200 lg:p-4 lg:dark:bg-zinc-800/30">
-          Get started by editing&nbsp;
-          <code className="font-mono font-bold">src/app/page.js</code>
-        </p>
-        <div className="fixed bottom-0 left-0 flex h-48 w-full items-end justify-center bg-gradient-to-t from-white via-white dark:from-black dark:via-black lg:static lg:h-auto lg:w-auto lg:bg-none">
-          <a
-            className="pointer-events-none flex place-items-center gap-2 p-8 lg:pointer-events-auto lg:p-0"
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=sagcc"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className="dark:invert"
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div className="flex flex-col min-h-screen font-sans bg-gradient-to-b from-white to-gray-200 dark:from-[#041C32] dark:via-[#041C32] dark:to-orange-500 text-gray-900 dark:text-white">
+      
+      {/* NAVBAR */}
+      <nav className="bg-gradient-to-r from-gray-100 to-gray-500 text-white flex items-center justify-between p-2 mb-2 shadow-md dark:from-[#041C32] dark:to-orange-500">
+        <div className="flex items-center ml-4">
+          <Link href="/">
+            <Image src="/img/logo.png" alt="logo" width={48} height={42} style={{ width: 'auto', height: 'auto' }} />
+          </Link>
+          <span className="ml-2 text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+            S A G C C
+          </span>
         </div>
-      </div>
+        <div className="flex-grow" />
+        <div className="flex items-center space-x-2 relative mr-2">
+          <button
+            className="bg-gray-500 text-white hover:bg-gray-400 p-1 rounded-full h-8 relative"
+            onClick={() => setShowConfigMenu(!showConfigMenu)}
+          >
+            <FaCog size={18} />
+          </button>
+          {showConfigMenu && (
+            <ul className="absolute right-0 top-full mt-2 w-48 bg-white bg-opacity-80 text-gray-900 dark:text-white shadow-lg rounded-lg overflow-hidden z-10">
+              <li
+                className="flex items-center p-2 hover:bg-gray-200 dark:hover:bg-gray-700 cursor-pointer"
+                onClick={() => router.push('/login')}
+              >
+                <FaCog className="mr-2" />
+                Iniciar sesión
+              </li>
+            </ul>
+          )}
+        </div>
+      </nav>
 
-      <div className="relative flex place-items-center before:absolute before:h-[300px] before:w-full sm:before:w-[480px] before:-translate-x-1/2 before:rounded-full before:bg-gradient-radial before:from-white before:to-transparent before:blur-2xl before:content-[''] after:absolute after:-z-20 after:h-[180px] after:w-full sm:after:w-[240px] after:translate-x-1/3 after:bg-gradient-conic after:from-sky-200 after:via-blue-200 after:blur-2xl after:content-[''] before:dark:bg-gradient-to-br before:dark:from-transparent before:dark:to-blue-700 before:dark:opacity-10 after:dark:from-sky-900 after:dark:via-[#0141ff] after:dark:opacity-40 before:lg:h-[360px] z-[-1]">
-        <Image
-          className="relative dark:drop-shadow-[0_0_0.3rem_#ffffff70] dark:invert"
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
+      {/* CONTENIDO */}
+      <main className="flex-grow overflow-auto p-4">
+        <div className="mt-6 mx-auto max-w-6xl border border-gray-400 p-4 rounded-lg shadow-md bg-white bg-opacity-0 dark:bg-gray-800 dark:bg-opacity-0">
+          
 
-      <div className="mb-32 grid text-center lg:max-w-5xl lg:w-full lg:mb-0 lg:grid-cols-4 lg:text-left">
-        <a
-          href="/admin"
-          className="group rounded-lg border border-transparent px-5 py-4 transition-colors hover:border-gray-300 hover:bg-gray-100 hover:dark:border-neutral-700 hover:dark:bg-neutral-800/30"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2 className={`mb-3 text-2xl font-semibold`}>
-            Sistema Automatizado Gestion Competencias Ciclismo {" "}
-            <span className="inline-block transition-transform group-hover:translate-x-1 motion-reduce:transform-none">
-              -&gt;
-            </span>
-          </h2>
-          <p className={`m-0 max-w-[30ch] text-sm opacity-50`}>
-            My project
-          </p>
-        </a>
-      </div>
-    </main>
-  );
+          {/* Encabezado de competencia */}
+          <div className="border border-orange-400 rounded-md p-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-sm sm:text-base">
+              <div>
+                <p className="font-bold">Nombre</p>
+                <p>{competencia?.nombre || competencia?.id || 'Desconocido'}</p>
+              </div>
+              <div>
+                <p className="font-bold">Disciplina</p>
+                <p>RUTA</p>
+              </div>
+              <div>
+                <p className="font-bold">Etapa</p>
+                <p>{competencia?.etapa || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="font-bold">Fecha y Hora</p>
+                <p>{currentDateTime}</p>
+              </div>
+            </div>
+          </div>
+
+          <h2 className="text-xl font-bold mb-4">Clasificación General</h2>
+          <hr className="border-orange-400 dark:border-orange-500 mb-4" />
+
+          {/* Animación de carga */}
+          {loading ? (
+            <div className="flex justify-center items-center py-10">
+              <div className="w-10 h-10 border-4 border-orange-400 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : clasificaciones.length === 0 ? (
+            <p className="text-gray-600 dark:text-gray-300">No hay clasificaciones registradas.</p>
+          ) : (
+            <div className="overflow-x-auto transition-opacity duration-500 opacity-100">
+              <table className="w-full table-auto text-xs sm:text-sm md:text-base text-center">
+                <thead>
+                  <tr className="bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-white">
+                    <th className="py-2 px-3">Posición</th>
+                    <th className="py-2 px-3">Nombre</th>
+                    <th className="py-2 px-3">Dorsal</th>
+                    <th className="py-2 px-3">Team</th>
+                    <th className="py-2 px-3">Tiempo</th>
+                    <th className="py-2 px-3">Diferencia</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clasificaciones.map((r, i) => (
+                    <tr
+                      key={i}
+                      className={`border-b ${i % 2 === 0 ? 'bg-orange-50 dark:bg-[#123456]' : 'bg-white dark:bg-[#0f2b47]'}`}
+                    >
+                      <td className="py-2 px-3 font-semibold">{r.posicion}</td>
+                      <td className="py-2 px-3">{r.nombre}</td>
+                      <td className="py-2 px-3">{r.dorsal}</td>
+                      <td className="py-2 px-3">{r.team}</td>
+                      <td className="py-2 px-3">{r.tiempo}</td>
+                      <td className="py-2 px-3">{r.diferencia}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Pie de página */}
+        <p className="text-xs text-gray-500 mt-6 text-center">
+          Fuente: Firebase SAGCC — Clasificación en tiempo real.
+        </p>
+      </main>
+    </div>
+  )
 }
