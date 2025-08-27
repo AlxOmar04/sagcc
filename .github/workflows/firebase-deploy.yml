@@ -47,3 +47,5 @@ jobs:
           firebaseServiceAccount: "${{ secrets.FIREBASE_SERVICE_ACCOUNT_SAGCC_04 }}"
           projectId: sagcc-04
           channelId: preview
+        env:
+          FIREBASE_CLI_EXPERIMENTS: webframeworks
